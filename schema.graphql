@@ -1,13 +1,15 @@
-type Token @entity {
+type Distribution @entity {
   id: ID!
-  decimals: Int
-  name: String
-  symbol: String
-}
-
-type Transfer @entity {
-  id: ID!
-  from: String!
-  to: String!
-  value: BigInt!
+  amount: BigInt
+  token: String
+  distributor: String
+  addedAt: BigInt
+  claimer: String
+  recipient: String
+  claimCaller: String
+  claimType: String
+  claimedAt: BigInt
+  transactionHash: String
+  claimGasPrice: BigInt
+  claimGasUsed: BigInt
 }
