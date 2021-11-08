@@ -1,15 +1,42 @@
 type Distribution @entity {
-  id: ID!
-  amount: BigInt
-  token: String
-  distributor: String
-  addedAt: BigInt
-  claimer: String
-  recipient: String
-  claimCaller: String
-  claimType: String
-  claimedAt: BigInt
-  transactionHash: String
-  claimGasPrice: BigInt
-  claimGasUsed: BigInt
+  id: ID! # The distribution ID
+  amountWei: BigInt! # The distribution amount, in wei
+  addedAt: BigInt! # Timestamp for when the distribution was added
+  claimedAt: BigInt # Timestamp for when the distribution was claimed
+  token: String!
+  distributor: Bytes!
+  addedTransactionHash: Bytes! # transaction hash for when the distribution was added
+  addedGasPrice: BigInt! # gas price to add distribution
+
+  claimedTransactionHash: Bytes # transaction hash for when the claim was made
+  claimGasPrice: BigInt # gas price to claim distribution
+  claimer: Bytes
+  recipient: Bytes
+  claimCaller: Bytes
+  claimType: String # was the claim made internally, externally or to a contract
+}
+
+# Overall daily statistics for distributions and associated claims
+type DistributionSnapshot @entity {
+  id: ID! # Maps to the date
+  timestamp: BigInt! # Timestamp representation for start of day
+  numDistributionsAdded: BigInt!
+  numDistributionsClaimed: BigInt!
+  avgAddedGasPrice: BigInt! # average gas price for distributions added
+  avgClaimedGasPrice: BigInt! # average gas price for distributions claimed
+  totalAmountAddedWei: BigInt!
+  totalAmountClaimedWei: BigInt!
+}
+
+# Daily statistics for distributions and associated claims per token
+type TokenDistributionSnapshot @entity {
+  id: ID! # String for token + date
+  token: Bytes!
+  timestamp: BigInt! # Timestamp representation for start of day
+  numDistributionsAdded: BigInt!
+  numDistributionsClaimed: BigInt!
+  avgAddedGasPrice: BigInt! # average gas price for distributions added
+  avgClaimedGasPrice: BigInt! # average gas price for distributions claimed
+  totalAmountAddedWei: BigInt!
+  totalAmountClaimedWei: BigInt!
 }

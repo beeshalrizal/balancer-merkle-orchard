@@ -1,5 +1,4 @@
-// import { Token } from '../types/schema';
-
+import { Address } from "@graphprotocol/graph-ts";
 import { DistributionAdded, DistributionClaimed } from "../types/MerkleOrchard/MerkleOrchard";
 import { Distribution } from "../types/schema";
 
@@ -9,7 +8,7 @@ export enum ClaimType {
     Callback = 'Callback',
 }
 
-export function getClaimType (claimer: string, recipient: string, claimCaller: string): string {
+export function getClaimType(claimer: Address, recipient: Address, claimCaller: Address): string {
     // From the contract, if the emitted event's claimer !== recipient, it is being made to a callback
     if (claimer !== recipient) return ClaimType.Callback;
 
@@ -19,24 +18,3 @@ export function getClaimType (claimer: string, recipient: string, claimCaller: s
     // Else the claim is being made to an external wallet
     return ClaimType.External;
 };
-
-
-export function getOrAddDistribution (event: DistributionAdded | DistributionClaimed): Distribution {
-    const id = event.params.distributionId.toHex();
-
-    let distribution = Distribution.load(id);
-    if (!!distribution) return distribution;
-
-    // create a new distribution
-    distribution = new Distribution(id);
-
-    // assign initial relevant params
-    distribution.distributor = event.params.distributor.toHex();
-    distribution.amount = event.params.amount;
-    distribution.token = event.params.token.toHex();
-    distribution.addedAt = event.block.timestamp;
-  
-    distribution.save();
-
-    return distribution;
-}
