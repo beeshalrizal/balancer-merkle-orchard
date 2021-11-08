@@ -1,28 +1,28 @@
 specVersion: 0.0.2
-description: Subgraph Template
-repository: https://github.com/TomAFrench/subgraph-template
+description: Merkle Orchard, Balancer
 schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum/contract
-    name: erc20
-    network: '{{networkName}}'
+    name: MerkleOrchard
+    network: mainnet
     source:
-      address: '{{contracts.erc20.address}}'
-      abi: erc20
+      address: '0xdAE7e32ADc5d490a43cCba1f0c736033F2b4eFca'
+      abi: MerkleOrchard
       # prettier-ignore
-      startBlock: {{contracts.erc20.startBlock}}
+      startBlock: 13425152
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.4
+      apiVersion: 0.0.5
       language: wasm/assemblyscript
       abis:
-        - name: erc20
-          file: ./abis/ERC20Detailed.json
+        - name: MerkleOrchard
+          file: ./abis/MerkleOrchard.json
       entities:
-        - Token
-        - Transfer
+        - Distribution
       eventHandlers:
-        - event: Transfer(indexed address,indexed address,uint256)
-          handler: handleTransfer
+        - event: DistributionAdded(indexed address,indexed address,uint256,bytes32,uint256)
+          handler: handleDistributionAdded
+        - event: DistributionClaimed(indexed address,indexed address,uint256,indexed address,address,uint256)
+          handler: handleDistributionClaimed
       file: ./src/mapping.ts
