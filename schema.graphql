@@ -68,35 +68,58 @@ type Claimer @entity {
   lastClaim: BigInt # Timestamp for when the claimer last made a claim
 }
 
-type OverallMetrics @entity {
+type OverallMetric @entity {
   id: ID! # zero wallet
-  distributionCount: BigInt # total number of distributions
-  distributionAmount: BigInt # total value of distributions
-  claimAmount: BigInt # total amount of claims
-  unclaimedAmount: BigInt # total amount yet to be claimed
-  claimCount: BigInt # total number of claims
+  distributionCount: BigInt! # total number of distributions
+  distributionAmount: BigInt! # total value of distributions
+  claimedAmount: BigInt! # total amount of claims
+  unclaimedAmount: BigInt! # total amount yet to be claimed
+  claimedCount: BigInt! # total number of claims
 }
 
 type ClaimerSnapshot @entity {
   id: ID! # claimerId-date
-  timestamp: BigInt! # timestamp representation of date
+  timestamp: Int! # timestamp representation of date
   claimer: Bytes! # Claimer's address
   claimedCount: BigInt! # The number of claims made for a given date
   claimedAmount: BigInt! # The amount claimed by the claimer for a given day
 }
 
 type DistributionSnapshot @entity {
-  id: ID! # String for distribution + date
-  timestamp: BigInt! # timetsamp representation
+  id: ID! # String for distributionId+date
+  timestamp: Int! # timetsamp representation
   distributionId: BigInt!
   claimedAmount: BigInt! # the amount of the distribution that was claimed, daily
-  # TODO should i have overall metrics so we can see the trend toward being fully claimed?
-}
-
-type TokenSnapshot @entity {
-
+  claimedCount: BigInt! # number of claims
+  distributionAmount: BigInt! # the amount distributed, daily
+  distributionCount: BigInt! # number of distributions
 }
 
 type DistributorSnapshot @entity {
+  id: ID! # String for distributorId-date
+  timestamp: Int!
+  distributorId: Bytes!
+  claimedAmount: BigInt! # the amount claimed for this distributor
+  claimedCount: BigInt! # the number of claims
+  distributionAmount: BigInt! # the amount distributed for this 
+  distributionCount: BigInt! # the number of distributions
+}
 
+type TokenSnapshot @entity {
+  id: ID! # string token-date
+  timestamp: Int!
+  token: Bytes! # address for token
+  claimedAmount: BigInt! # amount that has been claimed
+  claimedCount: BigInt! # the number of claims
+  distributionAmount: BigInt! # amount that has been distributed
+  distributionCount: BigInt! # the number of distributions
+}
+
+type OverallMetricSnapshot @entity {
+  id: ID! # 0token-date
+  timestamp: Int!
+  claimedAmount: BigInt! # the total value of claims
+  claimedCount: BigInt! # the number of claims
+  distributionAmount: BigInt! # the total amount of distributions
+  distributionCount: BigInt! # the number of distributions
 }

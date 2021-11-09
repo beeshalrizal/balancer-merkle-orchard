@@ -1,12 +1,25 @@
+import {
+    Claim,
+    Claimer,
+    ClaimerSnapshot,
+    ClaimRoot,
+    Distribution,
+    Distributor,
+    OverallMetric,
+    Token,
+    DistributionSnapshot,
+    DistributorSnapshot,
+    TokenSnapshot,
+    OverallMetricSnapshot,
+} from "./types/schema";
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { DistributionAdded, DistributionClaimed } from "./types/MerkleOrchard/MerkleOrchard";
-import { Claim, Claimer, ClaimerSnapshot, ClaimRoot, Distribution, Distributor, Token } from "./types/schema";
-import { bigOne, bigZero } from "./utils/constants";
+import { AddressZero, bigOne, bigZero } from "./utils/constants";
 import { getClaimType } from "./utils/helpers";
 
-/**
- *  Overall
- */
+/****************************
+ ****** Base Entities *******
+ ****************************/
 
 /**
  *  DistributionAdded is triggered whenever a new distribution has been created
@@ -31,11 +44,17 @@ import { getClaimType } from "./utils/helpers";
   
     distribution.save();
 
+    // update distribution snapshot
+    _updateDistributionSnapshotOnDistributionAdded(event);
+
     // update overall distributor metrics
     _updateDistributorOnDistributionAdded(event);
 
     // update token metrics
     _updateTokenOnDistributionAdded(event);
+
+    // update overall metrics
+    _updateOverallMetricsOnDistributionAdded(event);
 }
 
 function _updateTokenOnDistributionAdded(event: DistributionAdded): void {
@@ -46,6 +65,8 @@ function _updateTokenOnDistributionAdded(event: DistributionAdded): void {
     token.unclaimedAmount = token.distributionAmount.minus(token.claimedAmount);
 
     token.save();
+
+    _updateTokenSnapshotOnDistributionAdded
 }
 
 function _getToken(tokenId: Bytes): Token {
@@ -75,6 +96,8 @@ function _updateDistributorOnDistributionAdded(event: DistributionAdded): void {
     distributor.distributionCount = distributor.distributionCount.plus(bigOne);
     distributor.lastDistribution = event.block.timestamp;
     distributor.save();
+
+    _updateDistributorSnapshotOnDistributionAdded(event);
 }
 
 function _getDistributor(distributorId: Bytes, timestamp: BigInt): Distributor {
@@ -150,6 +173,9 @@ export function handleDistributionClaimed(event: DistributionClaimed): void {
 
     // Update the token claim metrics
     _updateTokenOnClaim(event);
+
+    // Update Overall Metrics on claim
+    _updateOverallMetricsOnClaim(event);
 }
 
 function _updateTokenOnClaim(event: DistributionClaimed): void {
@@ -160,6 +186,8 @@ function _updateTokenOnClaim(event: DistributionClaimed): void {
     token.claimedCount = token.claimedCount.plus(bigOne);
 
     token.save();
+
+    _updateTokenSnapshotOnDistributionClaimed(event);
 }
 
 function _updateClaimerOnClaim(event: DistributionClaimed): void {
@@ -197,6 +225,8 @@ function _updateDistributorOnClaim(event: DistributionClaimed): void {
     distributor.unclaimedAmount = distributor.distributionAmount.minus(distributor.claimedAmount);
 
     distributor.save()
+
+    _updateDistributorSnapshotOnDistributionClaimed(event);
 }
 
 function _updateDistributionOnClaim(event: DistributionClaimed): void {
@@ -215,19 +245,16 @@ function _updateDistributionOnClaim(event: DistributionClaimed): void {
     distribution.unclaimedAmount = distribution.distributionAmount.minus(distribution.claimedAmount);
 
     distribution.save();
+
+    _updateDistributionSnapshotOnClaim(event);
 }
 
 
-/**
- *  Snapshots
- */
+/****************************
+ ******** Snapshots *********
+ ****************************/
 function _updateClaimerSnapshot(event: DistributionClaimed): void {
-    let timestamp = event.block.timestamp.toI32();
-    let dayId = timestamp / 86400;
-    let claimer = event.params.claimer;
-    let snapshotId = claimer + '-' + dayId.toString();
-
-    let snapshot = _getClaimerSnapshot(snapshotId, claimer, timestamp);
+    let snapshot = _getClaimerSnapshot(event.params.claimer, event.block.timestamp);
 
     snapshot.claimedCount = snapshot.claimedCount.plus(bigOne);
     snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
@@ -235,12 +262,16 @@ function _updateClaimerSnapshot(event: DistributionClaimed): void {
     snapshot.save();
 }
 
-function _getClaimerSnapshot(snapshotId: string, claimer: Bytes, timestamp: BigInt): ClaimerSnapshot {
+function _getClaimerSnapshot(claimer: Bytes, timestamp: BigInt): ClaimerSnapshot {
+    let dayId = timestamp.toI32() / 86400;
+    let snapshotId = claimer.toHex() + '-' + dayId.toString();
+
     let snapshot = ClaimerSnapshot.load(snapshotId);
 
     if (snapshot == null) {
+        let dayStartTimestamp = dayId * 86400;
         snapshot = new ClaimerSnapshot(snapshotId);
-        snapshot.timestamp = timestamp;
+        snapshot.timestamp = dayStartTimestamp;
         snapshot.claimer = claimer;
         snapshot.claimedCount = bigZero;
         snapshot.claimedAmount = bigZero;
@@ -251,3 +282,208 @@ function _getClaimerSnapshot(snapshotId: string, claimer: Bytes, timestamp: BigI
     return snapshot;
 }
 
+function _updateOverallMetricsOnDistributionAdded(event: DistributionAdded): void {
+    let snapshot = _getOverallMetrics();
+
+    snapshot.distributionAmount = snapshot.distributionAmount.plus(event.params.amount);
+    snapshot.distributionCount = snapshot.distributionCount.plus(bigOne);
+    snapshot.unclaimedAmount = snapshot.distributionAmount.minus(snapshot.claimedAmount);
+
+    snapshot.save();
+
+    _updateOverallMetricSnapshotOnDistributionAdded(event);
+}
+
+function _updateOverallMetricsOnClaim(event: DistributionClaimed): void {
+    let snapshot = _getOverallMetrics();
+
+    snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
+    snapshot.claimedCount = snapshot.claimedCount.plus(bigOne);
+    snapshot.unclaimedAmount = snapshot.distributionAmount.minus(snapshot.claimedAmount);
+
+    snapshot.save();
+
+    _updateOverallMetricSnapshotOnClaimed(event);
+}
+
+function _getOverallMetrics(): OverallMetric {
+    let snapshot = OverallMetric.load(AddressZero);
+
+    if (snapshot == null) {
+        snapshot = new OverallMetric(AddressZero);
+        snapshot.distributionCount = bigZero;
+        snapshot.distributionAmount = bigZero;
+        snapshot.claimedAmount = bigZero;
+        snapshot.claimedCount = bigZero
+        snapshot.unclaimedAmount = bigZero
+
+        snapshot.save();
+    }
+
+    return snapshot;
+}
+
+function _updateDistributionSnapshotOnClaim(event: DistributionClaimed): void {
+    let snapshot = _getDistributionSnapshot(event.params.distributionId, event.block.timestamp);
+
+    snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
+    snapshot.claimedCount = snapshot.claimedCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _updateDistributionSnapshotOnDistributionAdded(event: DistributionAdded): void {
+    let snapshot = _getDistributionSnapshot(event.params.distributionId, event.block.timestamp);
+
+    snapshot.distributionAmount = snapshot.distributionAmount.plus(event.params.amount);
+    snapshot.distributionCount = snapshot.distributionCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _getDistributionSnapshot(distributionId: BigInt, timestamp: BigInt): DistributionSnapshot {
+    let dayId = timestamp.toI32() / 86400;
+    let distribution = distributionId.toString();
+    let distributionSnapshotId = distribution + '-' + dayId.toString();
+
+    let snapshot = DistributionSnapshot.load(distributionSnapshotId);
+
+    if (snapshot == null) {
+        let dayStartTimestamp = dayId * 86400;
+        snapshot = new DistributionSnapshot(distributionSnapshotId);
+        
+        snapshot.timestamp = dayStartTimestamp;
+        snapshot.claimedAmount = bigZero;
+        snapshot.claimedCount = bigZero;
+        snapshot.distributionAmount = bigZero;
+        snapshot.distributionCount = bigZero;
+        snapshot.distributionId = distributionId;
+
+        snapshot.save();
+    }
+
+    return snapshot;
+}
+
+function _updateDistributorSnapshotOnDistributionClaimed(event: DistributionClaimed): void {
+    let snapshot = _getDistributorSnapshot(event.params.distributor, event.block.timestamp);
+
+    snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
+    snapshot.claimedCount = snapshot.claimedCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _updateDistributorSnapshotOnDistributionAdded(event: DistributionAdded): void {
+    let snapshot = _getDistributorSnapshot(event.params.distributor, event.block.timestamp);
+
+    snapshot.distributionAmount = snapshot.distributionAmount.plus(event.params.amount);
+    snapshot.distributionCount = snapshot.distributionCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _getDistributorSnapshot(distributorId: Address, timestamp: BigInt): DistributorSnapshot {
+    let dayId = timestamp.toI32() / 86400;
+    let distributor = distributorId.toString();
+    let distributorSnapshotId = distributor + '-' + dayId.toString();
+
+    let snapshot = DistributorSnapshot.load(distributorSnapshotId);
+
+    if (snapshot == null) {
+        let dayStartTimestamp = dayId * 86400;
+        snapshot = new DistributorSnapshot(distributorSnapshotId);
+
+        snapshot.timestamp = dayStartTimestamp;
+        snapshot.distributorId = distributorId;
+        snapshot.distributionAmount = bigZero;
+        snapshot.distributionCount = bigZero;
+        snapshot.claimedAmount = bigZero;
+        snapshot.claimedCount = bigZero;
+
+        snapshot.save();
+    }
+
+    return snapshot;
+}
+
+function _updateTokenSnapshotOnDistributionAdded(event: DistributionAdded): void {
+    let snapshot = _getTokenSnapshot(event.params.token, event.block.timestamp);
+
+    snapshot.distributionAmount = snapshot.distributionAmount.plus(event.params.amount);
+    snapshot.distributionCount = snapshot.distributionCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _updateTokenSnapshotOnDistributionClaimed(event: DistributionClaimed): void {
+    let snapshot = _getTokenSnapshot(event.params.token, event.block.timestamp);
+
+    snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
+    snapshot.claimedCount  = snapshot.claimedCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _getTokenSnapshot(token: Address, timestamp: BigInt): TokenSnapshot {
+    let dayId = timestamp.toI32() / 86400;
+    let tokenSnapshotId = token.toString() + '-' + dayId.toString();
+
+    let snapshot = TokenSnapshot.load(tokenSnapshotId);
+
+    if (snapshot == null) {
+        let dayStartTimestamp = dayId * 86400;
+        snapshot = new TokenSnapshot(tokenSnapshotId);
+
+        snapshot.timestamp = dayStartTimestamp;
+        snapshot.token = token;
+        snapshot.claimedAmount = bigZero;
+        snapshot.claimedCount = bigZero;
+        snapshot.distributionAmount = bigZero;
+        snapshot.distributionCount = bigZero;
+
+        snapshot.save();
+    }
+
+    return snapshot;
+}
+
+function _updateOverallMetricSnapshotOnDistributionAdded(event: DistributionAdded): void {
+    let snapshot = _getOverallMetricSnapshot(event.block.timestamp);
+
+    snapshot.distributionAmount = snapshot.distributionAmount.plus(event.params.amount);
+    snapshot.distributionCount = snapshot.distributionCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _updateOverallMetricSnapshotOnClaimed(event: DistributionClaimed): void {
+    let snapshot = _getOverallMetricSnapshot(event.block.timestamp);
+
+    snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
+    snapshot.claimedCount = snapshot.claimedCount.plus(bigOne);
+
+    snapshot.save();
+}
+
+function _getOverallMetricSnapshot(timestamp: BigInt): OverallMetricSnapshot {
+    let dayId = timestamp.toI32() / 86400;
+    let overallSnapshotId = dayId.toString();
+
+    let snapshot = OverallMetricSnapshot.load(overallSnapshotId);
+
+    if  (snapshot == null) {
+        let dayStartTimestamp = dayId * 86400;
+        snapshot = new OverallMetricSnapshot(overallSnapshotId);
+
+        snapshot.timestamp = dayStartTimestamp;
+        snapshot.claimedAmount = bigZero;
+        snapshot.claimedCount = bigZero;
+        snapshot.distributionAmount = bigZero;
+        snapshot.distributionCount = bigZero;
+
+        snapshot.save
+    }
+
+    return snapshot;
+}
