@@ -381,7 +381,7 @@ function _updateDistributorSnapshotOnDistributionAdded(event: DistributionAdded)
 
 function _getDistributorSnapshot(distributorId: Address, timestamp: BigInt): DistributorSnapshot {
     let dayId = timestamp.toI32() / 86400;
-    let distributor = distributorId.toString();
+    let distributor = distributorId.toHex();
     let distributorSnapshotId = distributor + '-' + dayId.toString();
 
     let snapshot = DistributorSnapshot.load(distributorSnapshotId);
@@ -423,7 +423,7 @@ function _updateTokenSnapshotOnDistributionClaimed(event: DistributionClaimed): 
 
 function _getTokenSnapshot(token: Address, timestamp: BigInt): TokenSnapshot {
     let dayId = timestamp.toI32() / 86400;
-    let tokenSnapshotId = token.toString() + '-' + dayId.toString();
+    let tokenSnapshotId = token.toHex() + '-' + dayId.toString();
 
     let snapshot = TokenSnapshot.load(tokenSnapshotId);
 

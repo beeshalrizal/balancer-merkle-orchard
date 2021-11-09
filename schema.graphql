@@ -113,7 +113,7 @@ type TokenSnapshot @entity {
 }
 
 type OverallMetricSnapshot @entity {
-  id: ID! # 0token-date
+  id: ID! # date
   timestamp: Int!
   claimedAmount: BigInt! # the total value of claims
   claimedCount: BigInt! # the number of claims
