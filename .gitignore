@@ -23,5 +23,4 @@ node_modules/
 build/
 
 # Subgraph stuff
-subgraph.yaml
 src/types/
