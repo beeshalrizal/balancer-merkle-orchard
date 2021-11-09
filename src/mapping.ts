@@ -219,3 +219,6 @@ function _updateDistributionOnClaim(event: DistributionClaimed): void {
 /**
  *  Snapshots
  */
+function _totalSnapshot() {
+    
+}

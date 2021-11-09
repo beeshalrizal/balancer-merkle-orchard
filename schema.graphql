@@ -32,7 +32,8 @@ type Token @entity {
   claimedCount: BigInt! # The number of times 
 }
 
-# When a user makes a claim, there can be many claims at the same time. This entity is a pointer to all claims that occured.
+# When a user makes a claim, there can be many claims at the same time.
+# This entity is a pointer to all claims that occured.
 type ClaimRoot @entity {
   id: ID! # The claim transaction id
   numClaims: BigInt! # The number of claims made at the same time
@@ -67,6 +68,14 @@ type Claimer @entity {
   lastClaim: BigInt # Timestamp for when the claimer last made a claim
 }
 
+type OverallMetrics @entity {
+  id: ID!
+  distributionCount: BigInt
+  distributionAmount: BigInt
+  claimAmount: BigInt
+  claimCount: BigInt
+}
+
 
 type ClaimerSnapshot @entity {
   id: ID! # claimerId-date
@@ -85,25 +94,10 @@ type DistributionSnapshot @entity {
   # TODO should i have overall metrics so we can see the trend toward being fully claimed?
 }
 
-# Overall daily statistics for distributions and associated claims
-type TotalDistributionSnapshot @entity {
-  id: ID! # Maps to the date
-  timestamp: BigInt! # Timestamp representation for start of day
-  numDistributionsAdded: BigInt!
-  numDistributionsClaimed: BigInt!
-  distributionAmount: BigInt!
-  claimedAmount: BigInt!
+type TokenSnapshot @entity {
+
 }
 
-# Daily statistics for distributions and associated claims per token
-type TokenDistributionSnapshot @entity {
-  id: ID! # String for token + date
-  token: Bytes!
-  timestamp: BigInt! # Timestamp representation for start of day
-  numDistributionsAdded: BigInt!
-  numDistributionsClaimed: BigInt!
-  avgAddedGasPrice: BigInt! # average gas price for distributions added
-  avgClaimedGasPrice: BigInt! # average gas price for distributions claimed
-  totalAmountAddedWei: BigInt!
-  totalAmountClaimedWei: BigInt!
+type DistributorSnapshot @entity {
+
 }
