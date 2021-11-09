@@ -1,31 +1,98 @@
 type Distribution @entity {
-  id: ID! # The distribution ID
-  amountWei: BigInt! # The distribution amount, in wei
-  addedAt: BigInt! # Timestamp for when the distribution was added
-  claimedAt: BigInt # Timestamp for when the distribution was claimed
-  token: String!
+  id: ID! # transaction id for distribution being added
+  distributionId: BigInt! # Distribution ID
+  distributionAmount: BigInt! # The distribution amount, in wei
+  claimedAmount: BigInt! # The total amount claimed, in wei
+  unclaimedAmount: BigInt! # The amount unclaimed for this distribution
+  claimCount: BigInt! # the amount of times a claim was made
+  createdAt: BigInt! # Timestamp for when the distribution was added
+  token: String! # Token address
   distributor: Bytes!
-  addedTransactionHash: Bytes! # transaction hash for when the distribution was added
-  addedGasPrice: BigInt! # gas price to add distribution
+  transactionHash: Bytes! # transaction hash for when the distribution was added
+  merkleRoot: Bytes! # The merkleroot of the distribution
+}
 
-  claimedTransactionHash: Bytes # transaction hash for when the claim was made
-  claimGasPrice: BigInt # gas price to claim distribution
-  claimer: Bytes
-  recipient: Bytes
-  claimCaller: Bytes
-  claimType: String # was the claim made internally, externally or to a contract
+type Distributor @entity {
+  id: ID! # The distributor id
+  distributionCount: BigInt! # The number of distributions
+  distributionAmount: BigInt! # The amount of distributions made
+  claimedAmount: BigInt! # The amount of distributions claimed
+  claimedCount: BigInt! # The number of claims made
+  unclaimedAmount: BigInt! # The amount unclaimed for this distributor
+  firstDistribution: BigInt! # Timestamp for the first distribution
+  lastDistribution: BigInt # Timestamp for the last distribution
+}
+
+type Token @entity {
+  id: ID! # The token id, address of token
+  distributionCount: BigInt! # The number of distributions with this token
+  distributionAmount: BigInt! # The total value of distributions with this token
+  claimedAmount: BigInt! # The total claimed amount for this token
+  unclaimedAmount: BigInt! # The amount unclaimed for this token
+  claimedCount: BigInt! # The number of times 
+}
+
+# When a user makes a claim, there can be many claims at the same time. This entity is a pointer to all claims that occured.
+type ClaimRoot @entity {
+  id: ID! # The claim transaction id
+  numClaims: BigInt! # The number of claims made at the same time
+  amount: BigInt! # The total amount of all claims
+  claimer: Bytes!
+  claimCaller: Bytes!
+  recipient: Bytes!
+  gasPrice: BigInt! # gas price of the claim
+  claimedAt: BigInt! # timestamp for the claim being made
+}
+
+type Claim @entity {
+  id: ID! # The claim transaction id, `claimGroupId-index`
+  claimRootId: Bytes! # The ID of the claim group
+  index: BigInt! # The index of the claim in the claim group
+  distributionId: BigInt!
+  distribution: Distribution!
+  claimedAmount: BigInt! # The amount claimed, in Wei
+  claimedAt: BigInt! # Timestamp for when the distribution was claimed
+  claimer: Bytes!
+  recipient: Bytes!
+  claimCaller: Bytes!
+  token: Bytes! # The token being claimed
+  distributor: Bytes! # The distributor of the token
+  type: String! # was the claim made internally, externally or to a contract
+}
+
+type Claimer @entity {
+  id: ID! # The claimer address
+  claimedCount: BigInt! # Total number of claims made
+  claimedAmount: BigInt! # Total number of claims by value
+  lastClaim: BigInt # Timestamp for when the claimer last made a claim
+}
+
+
+type ClaimerSnapshot @entity {
+  id: ID! # claimerId-date
+  timestamp: BigInt! # timestamp representation of date
+  claimer: Bytes! # Claimer's address
+  claimedCount: BigInt! # The number of claims made for a given date
+  claimedAmount: BigInt! # The amount claimed by the claimer for a given day
+}
+
+
+type DistributionSnapshot @entity {
+  id: ID! # String for distribution + date
+  timestamp: BigInt! # timetsamp representation
+  distributionId: BigInt!
+  claimedAmount: BigInt! # the amount of the distribution that was claimed, daily
+  # TODO should i have overall metrics so we can see the trend toward being fully claimed?
 }
 
 # Overall daily statistics for distributions and associated claims
-type DistributionSnapshot @entity {
+type TotalDistributionSnapshot @entity {
   id: ID! # Maps to the date
   timestamp: BigInt! # Timestamp representation for start of day
   numDistributionsAdded: BigInt!
   numDistributionsClaimed: BigInt!
-  avgAddedGasPrice: BigInt! # average gas price for distributions added
-  avgClaimedGasPrice: BigInt! # average gas price for distributions claimed
-  totalAmountAddedWei: BigInt!
-  totalAmountClaimedWei: BigInt!
+  distributionAmount: BigInt!
+  claimedAmount: BigInt!
 }
 
 # Daily statistics for distributions and associated claims per token
