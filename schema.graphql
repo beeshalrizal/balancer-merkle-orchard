@@ -69,13 +69,13 @@ type Claimer @entity {
 }
 
 type OverallMetrics @entity {
-  id: ID!
-  distributionCount: BigInt
-  distributionAmount: BigInt
-  claimAmount: BigInt
-  claimCount: BigInt
+  id: ID! # zero wallet
+  distributionCount: BigInt # total number of distributions
+  distributionAmount: BigInt # total value of distributions
+  claimAmount: BigInt # total amount of claims
+  unclaimedAmount: BigInt # total amount yet to be claimed
+  claimCount: BigInt # total number of claims
 }
-
 
 type ClaimerSnapshot @entity {
   id: ID! # claimerId-date
@@ -84,7 +84,6 @@ type ClaimerSnapshot @entity {
   claimedCount: BigInt! # The number of claims made for a given date
   claimedAmount: BigInt! # The amount claimed by the claimer for a given day
 }
-
 
 type DistributionSnapshot @entity {
   id: ID! # String for distribution + date

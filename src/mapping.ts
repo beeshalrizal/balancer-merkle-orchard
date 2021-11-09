@@ -1,6 +1,6 @@
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { DistributionAdded, DistributionClaimed } from "./types/MerkleOrchard/MerkleOrchard";
-import { Claim, Claimer, ClaimRoot, Distribution, Distributor, Token } from "./types/schema";
+import { Claim, Claimer, ClaimerSnapshot, ClaimRoot, Distribution, Distributor, Token } from "./types/schema";
 import { bigOne, bigZero } from "./utils/constants";
 import { getClaimType } from "./utils/helpers";
 
@@ -170,6 +170,8 @@ function _updateClaimerOnClaim(event: DistributionClaimed): void {
     claimer.lastClaim = event.block.timestamp;
 
     claimer.save();
+
+    _updateClaimerSnapshot(event);
 }
 
 function _getClaimer (claimerId: Address): Claimer {
@@ -219,6 +221,33 @@ function _updateDistributionOnClaim(event: DistributionClaimed): void {
 /**
  *  Snapshots
  */
-function _totalSnapshot() {
-    
+function _updateClaimerSnapshot(event: DistributionClaimed): void {
+    let timestamp = event.block.timestamp.toI32();
+    let dayId = timestamp / 86400;
+    let claimer = event.params.claimer;
+    let snapshotId = claimer + '-' + dayId.toString();
+
+    let snapshot = _getClaimerSnapshot(snapshotId, claimer, timestamp);
+
+    snapshot.claimedCount = snapshot.claimedCount.plus(bigOne);
+    snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
+
+    snapshot.save();
 }
+
+function _getClaimerSnapshot(snapshotId: string, claimer: Bytes, timestamp: BigInt): ClaimerSnapshot {
+    let snapshot = ClaimerSnapshot.load(snapshotId);
+
+    if (snapshot == null) {
+        snapshot = new ClaimerSnapshot(snapshotId);
+        snapshot.timestamp = timestamp;
+        snapshot.claimer = claimer;
+        snapshot.claimedCount = bigZero;
+        snapshot.claimedAmount = bigZero;
+
+        snapshot.save();
+    }
+
+    return snapshot;
+}
+
