@@ -9,7 +9,6 @@ type Distribution @entity {
   token: String! # Token address
   distributor: Bytes!
   transactionHash: Bytes! # transaction hash for when the distribution was added
-  merkleRoot: Bytes! # The merkleroot of the distribution
 }
 
 type Distributor @entity {
@@ -19,8 +18,6 @@ type Distributor @entity {
   claimedAmount: BigInt! # The amount of distributions claimed
   claimedCount: BigInt! # The number of claims made
   unclaimedAmount: BigInt! # The amount unclaimed for this distributor
-  firstDistribution: BigInt! # Timestamp for the first distribution
-  lastDistribution: BigInt # Timestamp for the last distribution
 }
 
 type Token @entity {

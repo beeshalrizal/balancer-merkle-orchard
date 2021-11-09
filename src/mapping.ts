@@ -37,7 +37,6 @@ import { getClaimType } from "./utils/helpers";
     distribution.createdAt = event.block.timestamp;
     distribution.transactionHash = event.transaction.hash;
     distribution.distributionId = distributionId;
-    distribution.merkleRoot = event.params.merkleRoot;
 
     distribution.claimedAmount = bigZero;
     distribution.claimCount = bigZero;
@@ -94,7 +93,6 @@ function _updateDistributorOnDistributionAdded(event: DistributionAdded): void {
     let distributor = _getDistributor(event.params.distributor, event.block.timestamp);
     distributor.distributionAmount = distributor.distributionAmount.plus(event.params.amount);
     distributor.distributionCount = distributor.distributionCount.plus(bigOne);
-    distributor.lastDistribution = event.block.timestamp;
     distributor.save();
 
     _updateDistributorSnapshotOnDistributionAdded(event);
@@ -106,8 +104,6 @@ function _getDistributor(distributorId: Bytes, timestamp: BigInt): Distributor {
     // if no distributor exists, create a new one with blank metrics
     if (distributor == null) {
         distributor = new Distributor(distributorId.toHex());
-        distributor.firstDistribution = timestamp;
-        distributor.lastDistribution = timestamp;
         distributor.distributionCount = bigZero;
         distributor.distributionAmount = bigZero;
         distributor.claimedCount = bigZero;
