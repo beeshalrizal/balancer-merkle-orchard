@@ -65,7 +65,7 @@ function _updateTokenOnDistributionAdded(event: DistributionAdded): void {
 
     token.save();
 
-    _updateTokenSnapshotOnDistributionAdded
+    _updateTokenSnapshotOnDistributionAdded(event);
 }
 
 function _getToken(tokenId: Bytes): Token {
