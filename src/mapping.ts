@@ -15,7 +15,7 @@ import {
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { DistributionAdded, DistributionClaimed } from "./types/MerkleOrchard/MerkleOrchard";
 import { AddressZero, bigOne, bigZero } from "./utils/constants";
-import { getClaimType } from "./utils/helpers";
+import { getClaimType, getDistributionUniqId } from "./utils/helpers";
 
 /****************************
  ****** Base Entities *******
@@ -25,8 +25,9 @@ import { getClaimType } from "./utils/helpers";
  *  DistributionAdded is triggered whenever a new distribution has been created
  */
  export function handleDistributionAdded(event: DistributionAdded): void {
-    let distributionId = event.params.distributionId;
-    let id = distributionId.toHex();
+    // let distributionId = event.params.distributionId;
+    let distributionId = getDistributionUniqId(event.params.distributor, event.params.token, event.params.distributionId);
+    let id = distributionId;
 
     let distribution = new Distribution(id);
 
@@ -36,7 +37,7 @@ import { getClaimType } from "./utils/helpers";
     distribution.token = event.params.token.toHex();
     distribution.createdAt = event.block.timestamp;
     distribution.transactionHash = event.transaction.hash;
-    distribution.distributionId = distributionId;
+    distribution.distributionId = event.params.distributionId;
 
     distribution.claimedAmount = bigZero;
     distribution.claimCount = bigZero;
@@ -151,10 +152,14 @@ export function handleDistributionClaimed(event: DistributionClaimed): void {
     claim.token = event.params.token;
     claim.type = getClaimType(event.params.claimer, event.params.recipient, event.transaction.from);
     claim.distributionId = event.params.distributionId;
+    claim.distributionUniqueId = getDistributionUniqId(event.params.distributor, event.params.token, event.params.distributionId);
     claim.distributor = event.params.distributor;
     claim.claimedAt = event.block.timestamp;
     claim.distribution = event.params.distributionId.toString();
     claim.claimedAmount = event.params.amount;
+    claim.claimer = event.params.claimer;
+    claim.claimCaller = event.transaction.from;
+    claim.recipient = event.params.recipient;
 
     claim.save();
 
@@ -226,7 +231,8 @@ function _updateDistributorOnClaim(event: DistributionClaimed): void {
 }
 
 function _updateDistributionOnClaim(event: DistributionClaimed): void {
-    let distribution = Distribution.load(event.params.distributionId.toHex());
+    let distributionId = getDistributionUniqId(event.params.distributor, event.params.token, event.params.distributionId);
+    let distribution = Distribution.load(distributionId);
 
     // This shouldn't be able to happen, could enforce type above O.o
     if (distribution == null) {
@@ -320,7 +326,8 @@ function _getOverallMetrics(): OverallMetric {
 }
 
 function _updateDistributionSnapshotOnClaim(event: DistributionClaimed): void {
-    let snapshot = _getDistributionSnapshot(event.params.distributionId, event.block.timestamp);
+    let distributionUniqueId = getDistributionUniqId(event.params.distributor, event.params.token, event.params.distributionId);
+    let snapshot = _getDistributionSnapshot(distributionUniqueId, event.params.distributionId, event.block.timestamp);
 
     snapshot.claimedAmount = snapshot.claimedAmount.plus(event.params.amount);
     snapshot.claimedCount = snapshot.claimedCount.plus(bigOne);
@@ -329,7 +336,8 @@ function _updateDistributionSnapshotOnClaim(event: DistributionClaimed): void {
 }
 
 function _updateDistributionSnapshotOnDistributionAdded(event: DistributionAdded): void {
-    let snapshot = _getDistributionSnapshot(event.params.distributionId, event.block.timestamp);
+    let distributionUniqueId = getDistributionUniqId(event.params.distributor, event.params.token, event.params.distributionId);
+    let snapshot = _getDistributionSnapshot(distributionUniqueId, event.params.distributionId, event.block.timestamp);
 
     snapshot.distributionAmount = snapshot.distributionAmount.plus(event.params.amount);
     snapshot.distributionCount = snapshot.distributionCount.plus(bigOne);
@@ -337,9 +345,9 @@ function _updateDistributionSnapshotOnDistributionAdded(event: DistributionAdded
     snapshot.save();
 }
 
-function _getDistributionSnapshot(distributionId: BigInt, timestamp: BigInt): DistributionSnapshot {
+function _getDistributionSnapshot(distributionUniqueId: string, distributionId: BigInt, timestamp: BigInt): DistributionSnapshot {
     let dayId = timestamp.toI32() / 86400;
-    let distribution = distributionId.toString();
+    let distribution = distributionUniqueId;
     let distributionSnapshotId = distribution + '-' + dayId.toString();
 
     let snapshot = DistributionSnapshot.load(distributionSnapshotId);
@@ -354,6 +362,7 @@ function _getDistributionSnapshot(distributionId: BigInt, timestamp: BigInt): Di
         snapshot.distributionAmount = bigZero;
         snapshot.distributionCount = bigZero;
         snapshot.distributionId = distributionId;
+        snapshot.distributionUniqueId = distributionUniqueId;
 
         snapshot.save();
     }

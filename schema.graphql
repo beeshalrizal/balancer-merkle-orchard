@@ -1,5 +1,5 @@
 type Distribution @entity {
-  id: ID! # transaction id for distribution being added
+  id: ID! # unique distribution id, distributor + token + distributionId
   distributionId: BigInt! # Distribution ID
   distributionAmount: BigInt! # The distribution amount, in wei
   claimedAmount: BigInt! # The total amount claimed, in wei
@@ -46,6 +46,7 @@ type Claim @entity {
   id: ID! # The claim transaction id, `claimGroupId-index`
   claimRootId: Bytes! # The ID of the claim group
   index: BigInt! # The index of the claim in the claim group
+  distributionUniqueId: String! # unique distribution id, distributor + token + distributionId - this maps to Distribution entitity
   distributionId: BigInt!
   distribution: Distribution!
   claimedAmount: BigInt! # The amount claimed, in Wei
@@ -85,6 +86,7 @@ type ClaimerSnapshot @entity {
 type DistributionSnapshot @entity {
   id: ID! # String for distributionId+date
   timestamp: Int! # timetsamp representation
+  distributionUniqueId: String! # unique distribution id, distributor + token + distributionId
   distributionId: BigInt!
   claimedAmount: BigInt! # the amount of the distribution that was claimed, daily
   claimedCount: BigInt! # number of claims
